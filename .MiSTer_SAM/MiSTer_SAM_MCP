@@ -35,7 +35,7 @@ if [ -f "${misterpath}/Scripts/MiSTer_SAM.ini" ]; then
 fi
 
 # Remove trailing slash from paths
-for var in mrsampath misterpath arcadepath gbapath genesispath megacdpath neogeopath nespath snespath tgfx16path tgfx16cdpath; do
+for var in mrsampath misterpath arcadepath consolepath; do
 	declare -g ${var}="${!var%/}"
 done
 

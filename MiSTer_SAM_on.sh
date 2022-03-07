@@ -44,167 +44,26 @@ samdebug="No"
 samtrace="No"
 
 #======== LOCAL VARIABLES ========
-declare -i coreretries=3
-declare -i romloadfails=0
-mralist="/tmp/.SAMmras"
 gametimer=120
-corelist="arcade,gba,genesis,megacd,neogeo,nes,snes,tgfx16,tgfx16cd"
-usezip="Yes"
-disablebootrom="Yes"
 listenmouse="Yes"
 listenkeyboard="Yes"
 listenjoy="Yes"
-repository_url="https://github.com/mrchrisster/MiSTer_SAM"
+repository_url="https://github.com/InquisitiveCoder/MiSTer_SAM"
 branch="main"
-mbcurl="blob/master/mbc_v06"
 
 # ======== TTY2OLED =======
 ttyenable="No"
 ttydevice="/dev/ttyUSB0"
 
 #======== CORE PATHS ========
-arcadepath="/media/fat/_arcade"
-gbapath="/media/fat/games/GBA"
-genesispath="/media/fat/games/Genesis"
-megacdpath="/media/fat/games/MegaCD"
-neogeopath="/media/fat/games/NeoGeo"
-nespath="/media/fat/games/NES"
-snespath="/media/fat/games/SNES"
-tgfx16path="/media/fat/games/TGFX16"
-tgfx16cdpath="/media/fat/games/TGFX16-CD"
-
-# ======== CONSOLE WHITELISTS ========
-gbawhitelist="/media/fat/Scripts/MiSTer_SAM_whitelist_gba.txt"
-genesiswhitelist="/media/fat/Scripts/MiSTer_SAM_whitelist_genesis.txt"
-megacdwhitelist="/media/fat/Scripts/MiSTer_SAM_whitelist_megacd.txt"
-neogeowhitelist="/media/fat/Scripts/MiSTer_SAM_whitelist_neogeo.txt"
-neswhitelist="/media/fat/Scripts/MiSTer_SAM_whitelist_nes.txt"
-sneswhitelist="/media/fat/Scripts/MiSTer_SAM_whitelist_snes.txt"
-tgfx16whitelist="/media/fat/Scripts/MiSTer_SAM_whitelist_tgfx16.txt"
-tgfx16cdwhitelist="/media/fat/Scripts/MiSTer_SAM_whitelist_tgfx16cd.txt"
-
-#======== EXCLUDE LISTS ========
-arcadeexclude="First Bad Game.mra
-Second Bad Game.mra
-Third Bad Game.mra"
-
-gbaexclude="First Bad Game.gba
-Second Bad Game.gba
-Third Bad Game.gba"
-
-genesisexclude="First Bad Game.gen
-Second Bad Game.gen
-Third Bad Game.gen"
-
-megacdexclude="First Bad Game.chd
-Second Bad Game.chd
-Third Bad Game.chd"
-
-neogeoexclude="First Bad Game.neo
-Second Bad Game.neo
-Third Bad Game.neo"
-
-nesexclude="First Bad Game.nes
-Second Bad Game.nes
-Third Bad Game.nes"
-
-snesexclude="First Bad Game.sfc
-Second Bad Game.sfc
-Third Bad Game.sfc"
-
-tgfx16exclude="First Bad Game.pce
-Second Bad Game.pce
-Third Bad Game.pce"
-
-tgfx16cdexclude="First Bad Game.chd
-Second Bad Game.chd
-Third Bad Game.chd"
-
-# ======== CORE CONFIG ========
-function init_data() {
-	# Core to long name mappings
-	declare -gA CORE_PRETTY=( \
-		["arcade"]="MiSTer Arcade" \
-		["gba"]="Nintendo Game Boy Advance" \
-		["genesis"]="Sega Genesis / Megadrive" \
-		["megacd"]="Sega CD / Mega CD" \
-		["neogeo"]="SNK NeoGeo" \
-		["nes"]="Nintendo Entertainment System" \
-		["snes"]="Super Nintendo Entertainment System" \
-		["tgfx16"]="NEC TurboGrafx-16 / PC Engine" \
-		["tgfx16cd"]="NEC TurboGrafx-16 CD / PC Engine CD" \
-		)
-	
-	# Core to file extension mappings
-	declare -gA CORE_EXT=( \
-		["arcade"]="mra" \
-		["gba"]="gba" \
-		["genesis"]="md" \
-		["megacd"]="chd" \
-		["neogeo"]="neo" \
-		["nes"]="nes" \
-		["snes"]="sfc" \
-		["tgfx16"]="pce" \
-		["tgfx16cd"]="chd" \
-		)
-	
-	# Core to path mappings
-	declare -gA CORE_PATH=( \
-		["arcade"]="${arcadepath}" \
-		["gba"]="${gbapath}" \
-		["genesis"]="${genesispath}" \
-		["megacd"]="${megacdpath}" \
-		["neogeo"]="${neogeopath}" \
-		["nes"]="${nespath}" \
-		["snes"]="${snespath}" \
-		["tgfx16"]="${tgfx16path}" \
-		["tgfx16cd"]="${tgfx16cdpath}" \
-		)
-	
-	# Can this core use ZIPped ROMs
-	declare -gA CORE_ZIPPED=( \
-		["arcade"]="No" \
-		["gba"]="Yes" \
-		["genesis"]="Yes" \
-		["megacd"]="No" \
-		["neogeo"]="Yes" \
-		["nes"]="Yes" \
-		["snes"]="Yes" \
-		["tgfx16"]="Yes" \
-		["tgfx16cd"]="No" \
-		)
-}
+arcadepath="/media/fat/_Arcade"
+consolepath="/media/fat/_Console/MiSTer_SAM"
 
 #========= PARSE INI =========
 # Read INI
 if [ -f "${misterpath}/Scripts/MiSTer_SAM.ini" ]; then
 	source "${misterpath}/Scripts/MiSTer_SAM.ini"
 fi
-
-# Setup corelist
-corelist="$(echo ${corelist} | tr ',' ' ')"
-
-# Iterate through core exclude lists and convert them into
-# associative arrays for efficient lookups later
-for core in ${corelist}; do
-	declare -n excludelist=${core}exclude
-	declare -n blacklist=${core}blacklist
-	declare -A blacklist
-	while read -r game || [[ ! -z ${game} ]]; do
-		if [[ ! -z ${game} ]]; then
-			blacklist[${game}]=1
-		fi
-	done <<<"${excludelist}"
-done
-
-# Create folder exclude list
-fldrex=$(for f in "${folderexclude[@]}"; do echo "-o -iname *$f*" ; done)
-	
-# Remove trailing slash from paths
-for var in mrsampath misterpath mrapathvert mrapathhoriz arcadepath gbapath genesispath megacdpath neogeopath nespath snespath tgfx16path tgfx16cdpath; do
-	declare -g ${var}="${!var%/}"
-done
-
 
 #======== SAM MENU ========
 function sam_premenu() {
@@ -265,25 +124,6 @@ function sam_menu() {
 	parse_cmd ${menuresponse}
 }
 
-function sam_singlemenu() {
-	declare -a menulist=()
-	for core in ${corelist}; do
-		menulist+=( "${core^^}" )
-		menulist+=( "${CORE_PRETTY[${core,,}]} games only" )
-	done
-
-	dialog --clear --no-cancel --ascii-lines --no-tags \
-	--backtitle "Super Attract Mode" --title "[ Single System Select ]" \
-	--menu "Which system?" 0 0 0 \
-	"${menulist[@]}" \
-	Back 'Previous menu' 2>"/tmp/.SAMmenu"
-	menuresponse=$(<"/tmp/.SAMmenu")
-	clear
-	
-	if [ "${samquiet,,}" == "no" ]; then echo " menuresponse: ${menuresponse}"; fi
-	parse_cmd ${menuresponse}
-}
-
 function sam_utilitymenu() {
 	dialog --clear --no-cancel --ascii-lines --no-tags \
 	--backtitle "Super Attract Mode" --title "[ Utilities ]" \
@@ -337,26 +177,6 @@ function parse_cmd() {
 	elif [ ${#} -eq 0 ]; then # No options - show the pre-menu
 		sam_premenu
 	else
-		# If we're given a core name then we need to set it first
-		nextcore=""
-		for arg in ${@}; do
-			case ${arg,,} in
-				arcade | gba | genesis | megacd | neogeo | nes | snes | tgfx16 | tgfx16cd)
-				echo " ${CORE_PRETTY[${arg,,}]} selected!"
-				nextcore="${arg}"
-				;;
-			esac
-		done
-		
-		# If the one command was a core then we need to call in again with "start" specified
-		if [ ${nextcore} ] && [ ${#} -eq 1 ]; then
-			# Move cursor up a line to avoid duplicate message
-			echo -n -e "\033[A"
-			# Re-enter this function with start added
-			parse_cmd ${nextcore} start
-			return
-		fi
-
 		while [ ${#} -gt 0 ]; do
 			case ${1,,} in
 				default) # Default is split because sam_update relaunches itself
@@ -372,7 +192,7 @@ function parse_cmd() {
 				start) # Start SAM immediately
 					env_check ${1,,}
 					tty_init
-					sam_start ${nextcore}
+					sam_start
 					pre_exit
 					break
 					;;
@@ -380,7 +200,7 @@ function parse_cmd() {
 					echo " Skipping to next game..."
 					env_check ${1,,}
 					tty_init
-					next_core ${nextcore}
+					next_core
 					break
 					;;
 				stop) # Stop SAM immediately
@@ -404,13 +224,6 @@ function parse_cmd() {
 					;;
 				monitor) # Attach output to terminal
 					sam_monitor
-					break
-					;;
-				arcade | gba | genesis | megacd | neogeo | nes | snes | tgfx16 | tgfx16cd)
-					: # Placeholder since we parsed these above
-					;;
-				single)
-					sam_singlemenu
 					break
 					;;
 				utility)
@@ -507,8 +320,6 @@ function sam_update() { # sam_update (next command)
 		fi
 	else # We're running from /tmp - download dependencies and proceed
 		cp --force "/tmp/MiSTer_SAM_on.sh" "/media/fat/Scripts/MiSTer_SAM_on.sh"
-		get_mbc
-		get_partun
 		get_samstuff .MiSTer_SAM/MiSTer_SAM_init
 		get_samstuff .MiSTer_SAM/MiSTer_SAM_MCP
 		get_samstuff .MiSTer_SAM/MiSTer_SAM_joy.py
@@ -605,7 +416,7 @@ function there_can_be_only_one() { # there_can_be_only_one
 
 function env_check() {
 	# Check if we've been installed
-	if [ ! -f "${mrsampath}/mbc" ] || [ ! -f "${mrsampath}/partun" ] || [ ! -f "${mrsampath}/MiSTer_SAM_MCP" ]; then
+	if [ ! -f "${mrsampath}/MiSTer_SAM_MCP" ]; then
 		echo " SAM required files not found."
 		echo " Surprised? Check your INI."
 		sam_update ${1}
@@ -676,7 +487,7 @@ function pre_exit() { # pre_exit
 	#if [ "${usetty,,}" == "yes" ]; then /etc/init.d/S60tty2oled start; fi
 	echo
 }
-	
+
 
 #======== DOWNLOAD FUNCTIONS ========
 function curl_check() {
@@ -742,27 +553,6 @@ function get_samstuff() { #get_samstuff file (path)
 		chmod +x "${filepath}/${1##*/}"
 	fi
 	
-	echo " Done!"
-}
-
-function get_mbc() {
-	REPOSITORY_URL="https://github.com/mrchrisster/MiSTer_Batch_Control"
-	echo " Downloading mbc - a tool needed for launching roms..."
-	echo " Created for MiSTer by pocomane"
-	echo " ${REPOSITORY_URL}"
-	curl_download "/tmp/mbc" "${REPOSITORY_URL}/${mbcurl}?raw=true"
-	mv --force "/tmp/mbc" "${mrsampath}/mbc"
-	echo " Done!"
-}
-
-function get_partun() {
-  REPOSITORY_URL="https://github.com/woelper/partun"
-  echo " Downloading partun - needed for unzipping roms from big archives..."
-  echo " Created for MiSTer by woelper - who is allegedly not a spider"
-  echo " ${REPOSITORY_URL}"
-  latest=$(curl -s -L --insecure https://api.github.com/repos/woelper/partun/releases/latest | jq -r ".assets[] | select(.name | contains(\"armv7\")) | .browser_download_url")
-  curl_download "/tmp/partun" "${latest}"
- 	mv --force "/tmp/partun" "${mrsampath}/partun"
 	echo " Done!"
 }
 
@@ -876,7 +666,7 @@ function sam_monitor() {
 
 
 # ======== SAM OPERATIONAL FUNCTIONS ========
-function loop_core() { # loop_core (core)
+function loop_core() { # loop_core
 	echo " Let Mortal Kombat begin!"
 	# Reset game log for this session
 	echo "" |> /tmp/SAM_Games.log
@@ -884,7 +674,7 @@ function loop_core() { # loop_core (core)
 	while :; do
 		counter=${gametimer}
 
-		next_core ${1}
+		next_core
 		while [ ${counter} -gt 0 ]; do
 			echo -ne " Next game in ${counter}...\033[0K\r"
 			sleep 1
@@ -924,169 +714,39 @@ function loop_core() { # loop_core (core)
 	done
 }
 
-function next_core() { # next_core (core)
-	if [ -z "${corelist[@]//[[:blank:]]/}" ]; then
-		echo " ERROR: FATAL - List of cores is empty. Nothing to do!" >&2
+function next_core() { # next_core
+	local previous=${rompath}
+	rompath=$({ find "${arcadepath}" -type f -name '*.mra' -not -path "${previous}"; \
+		find "${consolepath}" -type f -name '*.mgl' -not -path "${previous}"; } \
+		| shuf --head-count=1 --random-source=/dev/urandom)
+
+	if [[ -z ${rompath} ]]; then
+		echo " ERROR: No MRA files found in ${arcadepath} and no MGL files found in ${consolepath}" >&2
 		exit 1
 	fi
 
-	if [ -z "${1}" ]; then
-		nextcore="$(echo ${corelist}| xargs shuf --head-count=1 --random-source=/dev/urandom --echo)"
-	elif [ "${1,,}" == "countdown" ] && [ "$2" ]; then
-		countdown="countdown"
-		nextcore="${2}"
-	elif [ "${2,,}" == "countdown" ]; then
-		nextcore="${1}"
-		countdown="countdown"
-	fi
-
-	if [[ ${samquiet,,} == no ]]; then
-		echo " Next core: ${nextcore}"
-	fi
-
-	if [ "${nextcore,,}" == "arcade" ]; then
-		# If this is an arcade core we go to special code
-		load_core_arcade
-		return
-	fi
-
-	# Capture the script's stdout so debug messages can be written to
-	# in the middle of pipelines.
-	exec 3>&1
-
-	local ext=${CORE_EXT[${nextcore,,}]}
-	local previous=${romname}
-
-	# Print all eligible file/game pairs and choose one at random.
-	# This approach allows all games to be chosen with equal probability even
-	# when they're in distributed unevenly inside zip files. It also allows the
-	# whitelist and blacklist files to be read only once, rather than for every
-	# zip file.
-	# 
-	# Process substitution is required since variables created in a subshell
-	# (e.g. at the end of a pipeline) will be lost.
-	local filepath
-	IFS=$'\037' read -r filepath romname < <(
-
-
-		function listfiles() {
-			local excludedirs=( -type d \( -iname '*BIOS*' -o -iname ' !MBC' ${fldrex} \) -prune -false -o )
-			if [[ ${CORE_ZIPPED[${nextcore,,}],,} == yes && ${usezip,,} == yes ]]; then
-				local zips=1
-			fi
-			local files=( -type f \( -iname "*.${ext}" ${zips:+ -o -iname '*.zip'} \) )
-			find "${CORE_PATH[${nextcore,,}]}" "${excludedirs[@]}" "${files[@]}" -print
-		}
-
-		function listfilegamepairs() {
-			local filepath
-			while read -r filepath; do
-				if [[ ${filepath} == *.zip ]]; then
-					partun --list "${filepath}" | grep -i ".${ext}\$"
-				else
-					echo "${filepath}"
-				fi \
-				| xargs -d'\n' -n1 basename \
-				| xargs -d'\n' -n1 printf '%s\037%s\n' "${filepath}"
-			done
-		}
-
-		function printcandidates() {
-			if [[ ${samdebug,,} == yes ]]; then
-				echo " Candidates:" >&3
-				tee >(
-					local filepath game
-					while IFS=$'\037' read -r filepath game; do
-						if [[ ! -z ${game} ]]; then
-							echo " * ${game%.${ext}}"
-						fi
-					done | sort >&3
-				)
-			fi
-		}
-
-		function applywhitelist() {
-			declare -n whitelistfile=${nextcore,,}whitelist
-			if [[ -s ${whitelistfile} ]]; then
-				grep -F -f <(
-					local game
-					while read -r game; do
-						printf '\037%s\n' "${game}"
-					done <"${whitelistfile}"
-				)
-			else
-				cat
-			fi
-		}
-
-		function applyblacklist() {
-			declare -n blacklist=${core}blacklist
-			local line filepath game
-			while read -r line; do
-				IFS=$'\037' read -r filepath game <<<"${line}"
-				if [[ -z ${blacklist[${game}]} ]]; then
-					echo "${line}"
-				fi
-			done
-		}
-
-		function excludeprevious() {
-			if [[ -z ${previous} ]]; then
-				cat
-			else
-				grep -Fv $'\037'"${previous}"
-			fi
-		}
-
-		listfiles \
-		| listfilegamepairs \
-		| applywhitelist \
-		| applyblacklist \
-		| excludeprevious \
-		| printcandidates \
-		| shuf --head-count=1 --random-source=/dev/urandom
-	)
+	local nextcore=$(parse_console "${rompath}")
+	local romname=$(basename "${rompath}")
 
 	if [[ ${samquiet,,} == no ]]; then
 		echo " Shuffle result:"
-		echo " * ${romname%.${ext}}"
+		echo " * ${romname%.*}"
 	fi
 
-	if [[ ${filepath} != *.zip ]]; then
-		rompath=${filepath}
-	else
-		if [[ ${samquiet,,} == no ]]; then
-			echo " Cleaning up previously unzipped ROMs..." 
-		fi
-		local tmpdir="/tmp/MiSTer_SAM";
-		# clean up previous unzips
-		rm -rf "${tmpdir}" && mkdir -p "${tmpdir}"
-		rompath=${tmpdir}/${romname}
-		if [[ ${samquiet,,} == no ]]; then
-			echo " Extracting to ${rompath}..." 
-		fi
-		"${mrsampath}"/partun "${filepath}" -i -f "${romname}" --rename "${rompath}" >/dev/null
+	if [[ -f ${rompath}.sam ]]; then
+		source "${rompath}.sam"
 	fi
 
-	if [ -z "${rompath}" ]; then
-		core_error "${nextcore}" "${rompath}"
-	else
-		if [ -f "${rompath}.sam" ]; then
-			source "${rompath}.sam"
-		fi
-		
-		declare -g romloadfails=0
-		load_core "${nextcore}" "${rompath}" "${romname%.*}" "${countdown}"
-	fi
+	load_core "${nextcore:-MiSTer Arcade}" "${rompath}" "${romname%.*}" "${countdown}"
 }
 
 function load_core() { # load_core core /path/to/rom name_of_rom (countdown)
 	echo -n " Starting now on the "
-	echo -ne "\e[4m${CORE_PRETTY[${1,,}]}\e[0m: "
+	echo -ne "\e[4m${1}\e[0m: "
 	echo -e "\e[1m${3}\e[0m"
 	echo "$(date +%H:%M:%S) - ${1} - ${3}" >> /tmp/SAM_Games.log
 	echo "${3} (${1})" > /tmp/SAM_Game.txt
-	tty_update "${CORE_PRETTY[${1,,}]}" "${3}" &
+	tty_update "${1}" "${3}" &
 
 	if [ "${4}" == "countdown" ]; then
 		for i in {5..1}; do
@@ -1095,114 +755,25 @@ function load_core() { # load_core core /path/to/rom name_of_rom (countdown)
 		done
 	fi
 
-	"${mrsampath}/mbc" load_rom ${1^^} "${2}" > /dev/null 2>&1
+	echo "load_core ${2}" >/dev/MiSTer_cmd
 	sleep 1
 	echo "" |>/tmp/.SAM_Joy_Activity
 	echo "" |>/tmp/.SAM_Mouse_Activity
 	echo "" |>/tmp/.SAM_Keyboard_Activity
 }
 
-function core_error() { # core_error core /path/to/ROM
-	if [ ${romloadfails} -lt ${coreretries} ]; then
-		declare -g romloadfails=$((romloadfails+1))
-		echo " ERROR: Failed ${romloadfails} times. No valid game found for core: ${1} rom: ${2}"
-		echo " Trying to find another rom..."
-		next_core ${1}
+function parse_console() { # parse_console rompath (
+	if [[ ${1} == *.mgl ]]; then
+		local tagname="rbf"
 	else
-		echo " ERROR: Failed ${romloadfails} times. No valid game found for core: ${1} rom: ${2}"
-		echo " ERROR: Core ${1} is blacklisted!"
-		declare -g corelist=("${corelist[@]/${1}}")
-		echo " List of cores is now: ${corelist[@]}"
-		declare -g romloadfails=0
-		next_core
-	fi	
+		local tagname="platform"
+	fi
+	# Parse the contents of the rbf element to find the console.
+	# This read loop assumes the element of interest has no attributes or child elements.
+	local tag content
+	while IFS=\> read -d\< tag content && [[ ${tag} != ${tagname} ]]; do true; done <"${1}"
+	echo $(basename "${content}")
 }
-
-function disable_bootrom() {
-	if [ "${disablebootrom}" == "Yes" ]; then
-		if [ -d "${misterpath}/Bootrom" ]; then
-			mount --bind /mnt "${misterpath}/Bootrom"
-		fi
-		if [ -f "${misterpath}/Games/NES/boot0.rom" ]; then
-			touch /tmp/brfake
-			mount --bind /tmp/brfake ${misterpath}/Games/NES/boot0.rom
-		fi
-		if [ -f "${misterpath}/Games/NES/boot1.rom" ]; then
-			touch /tmp/brfake
-			mount --bind /tmp/brfake ${misterpath}/Games/NES/boot1.rom
-		fi
-	fi
-}
-
-
-# ======== ARCADE MODE ========
-function build_mralist() {
-	# If no MRAs found - suicide!
-	find "${arcadepath}" -maxdepth 1 -type f \( -iname "*.mra" \) &>/dev/null
-	if [ ! ${?} == 0 ]; then
-		echo " The path ${arcadepath} contains no MRA files!"
-		loop_core
-	fi
-
-	# Check if the MRA list already exists - if so, leave it alone
-	if [ -f ${mralist} ]; then
-		return
-	fi
-	
-	# This prints the list of MRA files in a path,
-	# Cuts the string to just the file name,
-	# Then saves it to the mralist file.
-	
-	# If there is an empty exclude list ignore it
-	# Otherwise use it to filter the list
-	if [ ${#arcadeexclude[@]} -eq 0 ]; then
-		find "${arcadepath}" -maxdepth 1 -type f \( -iname "*.mra" \) | cut -c $(( $(echo ${#arcadepath}) + 2 ))- >"${mralist}"
-	else
-		find "${arcadepath}" -maxdepth 1 -type f \( -iname "*.mra" \) | cut -c $(( $(echo ${#arcadepath}) + 2 ))- | grep -vFf <(printf '%s\n' ${arcadeexclude[@]})>"${mralist}"
-	fi
-}
-
-function load_core_arcade() {
-	# Get a random game from the list
-	mra="$(shuf --head-count=1 --random-source=/dev/urandom ${mralist})"
-
-	# If the mra variable is valid this is skipped, but if not we try 10 times
-	# Partially protects against typos from manual editing and strange character parsing problems
-	for i in {1..10}; do
-		if [ ! -f "${arcadepath}/${mra}" ]; then
-			mra=$(shuf --head-count=1 --random-source=/dev/urandom ${mralist})
-		fi
-	done
-
-	# If the MRA is still not valid something is wrong - suicide
-	if [ ! -f "${arcadepath}/${mra}" ]; then
-		echo " There is no valid file at ${arcadepath}/${mra}!"
-		return
-	fi
-
-	mraname="$(echo "$(basename "${mra}")" | sed -e 's/\.[^.]*$//')"
-	echo -n " Starting now on the "
-	echo -ne "\e[4m${CORE_PRETTY[${nextcore,,}]}\e[0m: "
-	echo -e "\e[1m${mraname}\e[0m"
-	echo "$(date +%H:%M:%S) - Arcade - ${mraname}" >> /tmp/SAM_Games.log
-	echo "${mraname} (${nextcore})" > /tmp/SAM_Game.txt
-	tty_update "${CORE_PRETTY[${nextcore,,}]}" "${mraname}"
-
-	if [ "${1}" == "countdown" ]; then
-		for i in {5..1}; do
-			echo " Loading game in ${i}...\033[0K\r"
-			sleep 1
-		done
-	fi
-
-  # Tell MiSTer to load the next MRA
-  echo "load_core ${arcadepath}/${mra}" > /dev/MiSTer_cmd
- 	sleep 1
-	echo "" |>/tmp/.SAM_Joy_Activity
-	echo "" |>/tmp/.SAM_Mouse_Activity
-	echo "" |>/tmp/.SAM_Keyboard_Activity
-}
-
 
 #========= MAIN =========
 #======== DEBUG OUTPUT =========
@@ -1218,52 +789,18 @@ if [ "${samtrace,,}" == "yes" ]; then
 	echo " commandline: ${@}"
 	echo " repository_url: ${repository_url}"
 	echo " branch: ${branch}"
-	echo " mbcurl: ${mbcurl}"
 	echo ""
 	echo " gametimer: ${gametimer}"
-	echo " corelist: ${corelist}"
-	echo " usezip: ${usezip}"
-	echo " disablebootrom: ${disablebootrom}"
-	echo " mralist: ${mralist}"
 	echo " listenmouse: ${listenmouse}"
 	echo " listenkeyboard: ${listenkeyboard}"
 	echo " listenjoy: ${listenjoy}"
 	echo ""
 	echo " arcadepath: ${arcadepath}"
-	echo " gbapath: ${gbapath}"
-	echo " genesispath: ${genesispath}"
-	echo " megacdpath: ${megacdpath}"
-	echo " neogeopath: ${neogeopath}"
-	echo " nespath: ${nespath}"
-	echo " snespath: ${snespath}"
-	echo " tgfx16path: ${tgfx16path}"
-	echo " tgfx16cdpath: ${tgfx16cdpath}"
-	echo ""
-	echo " gbalist: ${gbalist}"
-	echo " genesislist: ${genesislist}"
-	echo " megacdlist: ${megacdlist}"
-	echo " neogeolist: ${neogeolist}"
-	echo " neslist: ${neslist}"
-	echo " sneslist: ${sneslist}"
-	echo " tgfx16list: ${tgfx16list}"
-	echo " tgfx16cdlist: ${tgfx16cdlist}"
-	echo ""
-	echo " arcadeexclude: ${arcadeexclude[@]}"
-	echo " gbaexclude: ${gbaexclude[@]}"
-	echo " genesisexclude: ${genesisexclude[@]}"
-	echo " megacdexclude: ${megacdexclude[@]}"
-	echo " neogeoexclude: ${neogeoexclude[@]}"
-	echo " nesexclude: ${nesexclude[@]}"
-	echo " snesexclude: ${snesexclude[@]}"
-	echo " tgfx16exclude: ${tgfx16exclude[@]}"
-	echo " tgfx16cdexclude: ${tgfx16cdexclude[@]}"
+	echo " consolepath: ${consolepath}"
 	echo " ********************************************************************************"
 	read -p " Continuing in 5 seconds or press any key..." -n 1 -t 5 -r -s
 fi	
 
-disable_bootrom	# Disable Bootrom until Reboot 
-build_mralist		# Generate list of MRAs
-init_data				# Setup data arrays
 parse_cmd ${@}	# Parse command line parameters for input
 pre_exit				# Shutdown routine	
 exit
